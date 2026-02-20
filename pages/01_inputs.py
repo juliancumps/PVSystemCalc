@@ -44,7 +44,7 @@ col10, col11, col12 = st.columns(3)
 with col10:
     st.session_state.nominalpv12 = st.number_input("Nominal PV Power in Watts for 12V", min_value=0.0, value=860.0)
 with col11:
-    st.session_state.nominalpv24 = st.number_input("Nominal PV Power in Watts for 24V", min_value=0.0, value=2200.0)
+    st.session_state.nominalpv24 = st.number_input("Nominal PV Power in Watts for 24V", min_value=0.0, value=1720.0)
 with col12:
     st.session_state.nominalpv48 = st.number_input("Nominal PV Power in Watts for 48V", min_value=0.0, value=3440.0)
 
