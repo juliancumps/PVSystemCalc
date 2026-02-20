@@ -97,8 +97,8 @@ system_voltage = st.radio("Select Your System Voltage:", options=["12V", "24V", 
 
 # Map voltage to nominal power
 voltage_map = {
-    "12V": st.session_state.nominalp12,
-    "24V": st.session_state.nominalp24,
+    "12V": st.session_state.nominalpv12,
+    "24V": st.session_state.nominalpv24,
     "48V": st.session_state.nominalpv48
 }
 
