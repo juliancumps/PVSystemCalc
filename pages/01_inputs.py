@@ -16,7 +16,7 @@ col4, col5, col6 = st.columns(3)
 with col4:
     st.session_state.vmp = st.number_input("Voltage @ Max Power Point (Vmp) in Volts", min_value=0.0, value=31.38)
 with col5:
-    st.session_state.imp = st.number_input("Current @ Max Power Point (Imp) in Amps)", min_value=0.0, value=13.07)
+    st.session_state.imp = st.number_input("Current @ Max Power Point (Imp) in Amps", min_value=0.0, value=13.07)
 with col6:
     st.session_state.tempCoeff = st.number_input(
         "Temperature Coefficient of Voc (%/°C)", 
