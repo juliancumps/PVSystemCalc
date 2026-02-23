@@ -131,7 +131,7 @@ if st.button("Find Valid Configurations"):
         # Get all constraints
         max_series = st.session_state.max_series
         max_parallel = st.session_state.max_parallel
-        max_panels_power = st.session_state.max_panels_powehttps://pvsystemcalc.streamlit.app/r
+        max_panels_power = st.session_state.max_panels_power
         battery_voltage = st.session_state.battery_voltage
         max_charge_current = st.session_state.macA
         
