@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 st.header("Calculations:")
 st.markdown("###### Please be sure to click all calculation buttons in order from top to bottom to ensure correct calculations.")
@@ -178,7 +179,6 @@ if st.button("Find Valid Configurations"):
                 })
         
         if valid_configs:
-            import pandas as pd
             df = pd.DataFrame(valid_configs)
             
             # Sort by Total Panels descending (most panels first)
@@ -208,7 +208,7 @@ if st.button("Find Valid Configurations"):
         else:
             st.error("No valid configurations found that meet all constraints!")
 
-        st.divider()
+st.divider()
 
 st.subheader("Final Safety Check: Battery Output Current")
 
@@ -272,12 +272,18 @@ if st.button("Perform Final Safety Check"):
                     "Status": "✓ SAFE" if passes_all else "✗ UNSAFE"
                 })
         
+        # Store in session state so it persists
         if final_configs:
-            import pandas as pd
+            st.session_state.final_configs_df = pd.DataFrame(final_configs)
+        else:
+            st.session_state.final_configs_df = None
+        
+        if final_configs:
             df = pd.DataFrame(final_configs)
             
             # Sort by Total Panels descending (most panels first)
             df = df.sort_values(by='Total Panels', ascending=False).reset_index(drop=True)
+            st.session_state.final_configs_df = df
             
             safe_count = len([c for c in final_configs if c['Status'] == "✓ SAFE"])
             
@@ -321,3 +327,55 @@ if st.button("Perform Final Safety Check"):
                 st.error("✗ Red rows = Unsafe - would exceed charger current limits to battery")
         else:
             st.error("No valid configurations found that meet all constraints!")
+
+st.divider()
+
+st.subheader("Select a Configuration")
+
+if 'final_configs_df' in st.session_state and st.session_state.final_configs_df is not None:
+    df = st.session_state.final_configs_df
+    safe_configs = df[df['Status'] == "✓ SAFE"].reset_index(drop=True)
+    
+    if len(safe_configs) > 0:
+        st.write("Click a button below to select a safe configuration for wiring diagram and fusing calculations:")
+        
+        # Create a grid layout - 3 buttons per row
+        cols_per_row = 3
+        num_rows = (len(safe_configs) + cols_per_row - 1) // cols_per_row
+        
+        for row in range(num_rows):
+            cols = st.columns(cols_per_row)
+            
+            for col_idx in range(cols_per_row):
+                config_idx = row * cols_per_row + col_idx
+                
+                if config_idx < len(safe_configs):
+                    config_data = safe_configs.iloc[config_idx]
+                    
+                    with cols[col_idx]:
+                        button_text = f"{config_data['Config']}\n({int(config_data['Total Panels'])} panels)"
+                        
+                        if st.button(button_text, key=f"select_{config_idx}", use_container_width=True):
+                            series = int(config_data['Config'].split('s')[0])
+                            parallel = int(config_data['Config'].split('s')[1].split('p')[0])
+                            
+                            st.session_state.selected_config = {
+                                'series': series,
+                                'parallel': parallel,
+                                'total_panels': int(config_data['Total Panels']),
+                                'panel_voltage': config_data['Panel Voltage (V)'],
+                                'panel_current': config_data['Panel Current (A)'],
+                                'panel_power': config_data['Panel Power (W)'],
+                                'battery_voltage': config_data['Battery Voltage (V)'],
+                                'battery_current': config_data['Battery Current (A)'],
+                                'config_str': config_data['Config']
+                            }
+                            st.rerun()
+        
+        # Show confirmation if something is selected
+        if 'selected_config' in st.session_state:
+            st.success(f"✓ Selected: {st.session_state.selected_config['config_str']} - Go to the Wiring page to see the diagram!")
+    else:
+        st.warning("No safe configurations available to select.")
+else:
+    st.info("Run the 'Perform Final Safety Check' calculation above to see configuration options.")
