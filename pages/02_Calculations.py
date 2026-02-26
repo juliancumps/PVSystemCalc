@@ -267,7 +267,7 @@ if st.button("Perform Final Safety Check"):
                     "Panel Current (A)": round(output_current, 2),
                     "Panel Power (W)": output_power,
                     "Battery Voltage (V)": battery_voltage,
-                    "Battery Current (A)": round(battery_output_current, 2),
+                    "Current to Battery (A)": round(battery_output_current, 2),
                     "Max Charger Current (A)": max_charge_current,
                     "Status": "✓ SAFE" if passes_all else "✗ UNSAFE"
                 })
@@ -367,7 +367,7 @@ if 'final_configs_df' in st.session_state and st.session_state.final_configs_df 
                                 'panel_current': config_data['Panel Current (A)'],
                                 'panel_power': config_data['Panel Power (W)'],
                                 'battery_voltage': config_data['Battery Voltage (V)'],
-                                'battery_current': config_data['Battery Current (A)'],
+                                'battery_current': config_data['Current to Battery (A)'],
                                 'config_str': config_data['Config']
                             }
                             st.rerun()

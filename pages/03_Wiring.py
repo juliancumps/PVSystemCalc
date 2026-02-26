@@ -52,7 +52,7 @@ else:
     with col1:
         st.metric("PV String Current (Isc)", f"{string_isc:.2f} A")
         st.metric("PV Fuse Rating", f"{pv_fuse} A")
-        st.info(f"Calculated: {pv_fuse_calculated:.2f} A × 1.25 NEC factor")
+        st.info(f"Calculated: {string_isc:.2f} A × 1.25 NEC factor")
     
     with col2:
         st.metric("PV Max Voltage", f"{pv_disconnect_voltage:.2f} V")
@@ -92,64 +92,102 @@ else:
         ax.text(x, y, text, ha='center', va='center', fontsize=fontsize, 
                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
     
+    # Colors for wiring
+    color_positive = '#FF0000'  # Red for positive
+    color_negative = '#000000'   # Black for negative
+    color_ground = '#FFD700'   # Gold for ground
+
+    ####################################################
+
     # Solar Panels (left side)
-    panel_y_start = 8
-    panel_spacing = 1.2
-    
+    panel_y_start = 8.5
+    panel_spacing = 1.5
+    panel_x_spacing = 2
+
+    # Draw all panels
+    for p in range(config['parallel']):
+        for i in range(config['series']):
+            y_pos = panel_y_start - (i * panel_spacing)
+            x_pos = 0.8 + (p * panel_x_spacing)
+            draw_box(ax, x_pos, y_pos, 0.8, 0.6, f"PV", color_pv, fontsize=9)
+            # Add terminal labels
+            ax.text(x_pos + 0.7, y_pos + 0.5, '+', ha='center', va='center', fontsize=12, weight='bold', color='red',
+                bbox=dict(boxstyle='circle', facecolor='white', edgecolor='red', linewidth=1))
+            ax.text(x_pos + 0.7, y_pos - 0.5, '−', ha='center', va='center', fontsize=12, weight='bold', color='black',
+                bbox=dict(boxstyle='circle', facecolor='white', edgecolor='black', linewidth=1))
+
+    # Draw series connections (within each string - + to −)
+    for p in range(config['parallel']):
+        x_pos = 0.8 + (p * panel_x_spacing)
+        for i in range(config['series'] - 1):
+            y_start = panel_y_start - (i * panel_spacing)
+            y_end = panel_y_start - ((i + 1) * panel_spacing)
+            
+            ax.plot([x_pos + 0.8, x_pos + 1.3], [y_start + 0.5, y_start + 0.5], 
+                    color=color_positive, linewidth=2.5)
+            ax.plot([x_pos + 1.3, x_pos + 1.3], [y_start + 0.5, y_end - 0.5], 
+                    color=color_positive, linewidth=2.5)
+            ax.plot([x_pos + 1.3, x_pos + 0.8], [y_end - 0.5, y_end - 0.5], 
+                    color=color_positive, linewidth=2.5)
+
+    # Draw parallel connections (+ to + above, − to − below)
     for i in range(config['series']):
         y_pos = panel_y_start - (i * panel_spacing)
-        draw_box(ax, 1.5, y_pos, 0.8, 0.6, f"PV{i+1}", color_pv, fontsize=8)
-    
-    # Draw parallel strings if needed
-    if config['parallel'] > 1:
-        for p in range(1, config['parallel']):
-            for i in range(config['series']):
-                y_pos = panel_y_start - (i * panel_spacing)
-                draw_box(ax, 1.5 + (p * 1.2), y_pos, 0.8, 0.6, f"PV{i+1}", color_pv, fontsize=8)
-    
-    # PV combiner box with fuse
-    draw_box(ax, 4, 6.5, 1.2, 0.8, f"PV Fuse\n{pv_fuse}A", '#FFE4B5', fontsize=9)
-    draw_label(ax, 4, 7.8, f"Isc: {string_isc:.1f}A\nVoc: {pv_disconnect_voltage:.1f}V", fontsize=8)
-    
-    # MPPT Charge Controller (center)
-    draw_box(ax, 7, 6.5, 1.5, 1, "MPPT\nController", color_mppt, fontsize=10)
-    draw_label(ax, 7, 5.2, f"Input: {config['panel_voltage']:.1f}V @ {config['panel_current']:.1f}A\nPower: {config['panel_power']:.0f}W", fontsize=8)
-    
-    # Battery Fuse
-    draw_box(ax, 10, 6.5, 1.2, 0.8, f"Batt Fuse\n{battery_fuse}A", '#FFE4B5', fontsize=9)
-    draw_label(ax, 10, 7.8, f"I: {config['battery_current']:.1f}A\nV: {config['battery_voltage']:.0f}V", fontsize=8)
-    
-    # Battery (right side)
+        
+        for p in range(config['parallel'] - 1):
+            x_start = 0.8 + (p * panel_x_spacing)
+            x_end = 0.8 + ((p + 1) * panel_x_spacing)
+            
+            # Red: + to + (above)
+            ax.plot([x_start + 0.7, x_start + 0.7, x_end + 0.7, x_end + 0.7], 
+                    [y_pos + 0.5, y_pos + 1.0, y_pos + 1.0, y_pos + 0.5], 
+                    color=color_positive, linewidth=2.5)
+            
+            # Black: − to − (below)
+            ax.plot([x_start + 0.7, x_start + 0.7, x_end + 0.7, x_end + 0.7], 
+                    [y_pos - 0.5, y_pos - 1.0, y_pos - 1.0, y_pos - 0.5], 
+                    color=color_negative, linewidth=2.5)
+
+    # Output from PV array (from the last string)
+    output_x = 0.8 + ((config['parallel'] - 1) * panel_x_spacing) + 0.7
+    output_y_pos = panel_y_start  # Top panel +
+    output_y_neg = panel_y_start - ((config['series'] - 1) * panel_spacing)  # Bottom panel −
+
+    # Route from array to MPPT
+    ax.plot([output_x, 5.5], [output_y_pos, output_y_pos], color=color_positive, linewidth=2.5)
+    ax.plot([5.5, 6.25], [output_y_pos, 6.8], color=color_positive, linewidth=2.5)
+
+    ax.plot([output_x, 5.5], [output_y_neg, output_y_neg], color=color_negative, linewidth=2.5)
+    ax.plot([5.5, 6.25], [output_y_neg, 6.2], color=color_negative, linewidth=2.5)
+
+    # MPPT Charge Controller
+    draw_box(ax, 7.5, 6.5, 1.5, 1, "MPPT\nController", color_mppt, fontsize=10)
+    draw_label(ax, 7.5, 5.1, f"In:{config['panel_voltage']:.0f}V@{config['panel_current']:.1f}A\nOut:{config['battery_voltage']:.0f}V@{config['battery_current']:.1f}A", fontsize=7)
+
+    # From MPPT to Battery
+    ax.plot([8.75, 11.5], [6.8, 6.8], color=color_positive, linewidth=2.5)
+    ax.plot([8.75, 11.5], [6.2, 6.2], color=color_negative, linewidth=2.5)
+
+    # Battery
     draw_box(ax, 12.5, 6.5, 1.2, 0.8, f"Battery\n{config['battery_voltage']:.0f}V", color_battery, fontsize=10)
-    draw_label(ax, 12.5, 5.2, f"Output: {config['battery_current']:.1f}A\nPower: {config['panel_power']:.0f}W", fontsize=8)
-    
-    # Draw wiring connections
-    # PV to combiner
-    ax.plot([2.5, 3.4], [6.5, 6.5], color=color_wire, linewidth=2)
-    draw_label(ax, 2.9, 6.8, f"{config['panel_voltage']:.0f}V", fontsize=8)
-    
-    # Combiner to MPPT
-    ax.plot([4.6, 6.25], [6.5, 6.5], color=color_wire, linewidth=2)
-    
-    # MPPT to Battery Fuse
-    ax.plot([7.75, 9.4], [6.5, 6.5], color=color_wire, linewidth=2)
-    draw_label(ax, 8.6, 6.8, f"{config['battery_voltage']:.0f}V\n{config['battery_current']:.1f}A", fontsize=8)
-    
-    # Fuse to Battery
-    ax.plot([10.6, 11.9], [6.5, 6.5], color=color_wire, linewidth=2)
-    
+    draw_label(ax, 12.5, 5.2, f"Charge:{config['battery_current']:.1f}A\nPower:{config['panel_power']:.0f}W", fontsize=7)
+
     # Ground connections
-    ax.plot([1.5, 1.5], [7.8, 8.5], color=color_wire, linewidth=1.5, linestyle='--')
-    ax.plot([7, 7], [7, 7.5], color=color_wire, linewidth=1.5, linestyle='--')
-    ax.plot([12.5, 12.5], [5.8, 5.2], color=color_wire, linewidth=1.5, linestyle='--')
-    
-    # Add title and legend
-    ax.text(7, 9.5, f"PV System Wiring Diagram - {config['config_str']}", 
-           ha='center', fontsize=14, weight='bold')
-    
-    ax.text(0.5, 0.8, f"Panel Config: {config['series']}S × {config['parallel']}P = {config['total_panels']} panels", fontsize=9)
-    ax.text(0.5, 0.2, "Dashed lines = Ground connections | All fuses rated for DC solar applications", fontsize=8, style='italic')
-    
+    ax.plot([7.5, 7.5], [7.0, 7.8], color=color_ground, linewidth=1.5, linestyle='--')
+    ax.plot([12.5, 12.5], [6.0, 5.0], color=color_ground, linewidth=1.5, linestyle='--')
+
+    # Add title
+    ax.text(7, 9.7, f"PV System Wiring Diagram - {config['config_str']}", 
+        ha='center', fontsize=14, weight='bold')
+
+    # Add legend and config info
+    ax.text(0.2, 0.5, "Red = Positive (+)  |  Black = Negative (−)  |  Gold Dashed = Ground", 
+            fontsize=8, style='italic', weight='bold')
+    ax.text(0.2, -0.1, f"Config: {config['series']}S × {config['parallel']}P  =  {config['series']} panels/string × {config['parallel']} parallel strings", 
+            fontsize=8, weight='bold')
+
+    ####################################################
+
     plt.tight_layout()
     st.pyplot(fig)
     
