@@ -72,7 +72,7 @@ else:
     st.subheader("Wire Gauge Calculator")
     
     st.info("""
-    📏 Enter the cable run distances for your system. The calculator will determine the minimum wire gauge needed 
+    Enter the cable run distances for your system. The calculator will determine the minimum wire gauge needed 
     to keep voltage drop below recommended limits (3% for PV side, 2% for battery side).
     """)
     
