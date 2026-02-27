@@ -122,12 +122,12 @@ with config_col2:
                     
                     st.session_state.battery_voltage = config_data['battery_system']['battery_bank_nominal_voltage']
                     
-                    st.success("✅ Configuration loaded successfully!")
+                    st.success("Configuration loaded successfully! (values will not show, but are uploaded! If you want to edit, you may click the calculations tab and then come back to this tab and uploaded values will appear)")
                     st.rerun()
                 else:
-                    st.error("❌ File corrupted or invalid format")
+                    st.error("File corrupted or invalid format")
         except (json.JSONDecodeError, KeyError, ValueError):
-            st.error("❌ File corrupted or invalid format")
+            st.error("File corrupted or invalid format")
 
 with config_col3:
     if st.button("Reset to Defaults", use_container_width=True):
