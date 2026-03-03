@@ -14,7 +14,7 @@ else:
     
     st.subheader(f"Configuration: {config['config_str']}")
     
-    # Display selected config info
+    #show selected config info
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Series Panels", config['series'])
@@ -27,24 +27,24 @@ else:
     
     st.divider()
     
-    # Calculate fusing
+    #calculate fusing
     st.subheader("Fusing Calculations")
     
     isc = st.session_state.isc
     voc_cold = st.session_state.get('voc_cold', st.session_state.voc)
     
-    # PV String fuse (1.25x Isc per NEC)
+    #PV string fuse (using 1.25x Isc per NEC)
     string_isc = isc * config['parallel']
     pv_fuse_calculated = string_isc * 1.25
     
-    # Standard fuse ratings
+    #standard fuse ratings map
     standard_fuses = [15, 20, 25, 30, 40, 50, 60, 70, 80, 100, 125, 150]
     pv_fuse = next((f for f in standard_fuses if f >= pv_fuse_calculated), 150)
     
-    # Disconnect/breaker on PV side (based on Voc)
+    #the disconnect/breaker on PV side (based on Voc)
     pv_disconnect_voltage = voc_cold * config['series']
     
-    # Battery side fuse (1.25x battery current)
+    #the battery side fuse (1.25x battery current)
     battery_fuse_calculated = config['battery_current'] * 1.25
     battery_fuse = next((f for f in standard_fuses if f >= battery_fuse_calculated), 150)
     
@@ -62,13 +62,10 @@ else:
     with col3:
         st.metric("Battery Charging Current", f"{config['battery_current']:.2f} A")
         st.metric("Battery Fuse Rating", f"{battery_fuse} A")
-        st.info(f"Calculated: {config['battery_current']:.2f} A × 1.25 NEC factor")
-    
+        st.info(f"Calculated: {config['battery_current']:.2f} A × 1.25 NEC factor")    
     st.divider()
-    
-    # ============================================
-    # WIRE GAUGE CALCULATOR SECTION (NEW)
-    # ============================================
+
+    # WIRE GAUGE CALCULATOR
     st.subheader("Wire Gauge Calculator")
     
     st.info("""
@@ -76,7 +73,7 @@ else:
     to keep voltage drop below recommended limits (3% for PV side, 2% for battery side).
     """)
     
-    # Wire gauge reference table (AWG to resistance)
+    #gauge reference table (AWG to resistance)
     wire_data = {
         'AWG': ['4', '6', '8', '10', '12', '2/0', '3/0', '4/0'],
         'Resistance (Ω/1000ft)': [0.49, 0.78, 1.24, 1.97, 3.14, 0.097, 0.077, 0.061],
@@ -84,7 +81,7 @@ else:
     }
     wire_df = pd.DataFrame(wire_data)
     
-    # Input section for cable runs
+    #section for user input cable runs
     st.write("**Enter your cable run distances:**")
     
     cable_col1, cable_col2 = st.columns(2)
@@ -107,29 +104,17 @@ else:
             help="One-way distance from charge controller to battery bank"
         )
     
-    
-    # Wire gauge calculation function
+    #wire gauge calculation function
     def calculate_wire_gauge(current, voltage, distance_one_way, max_voltage_drop_percent):
-        """
-        Calculate minimum wire gauge needed.
         
-        Using Ohm's law and voltage drop formula:
-        Voltage Drop = (2 × I × R × D) / 1000
-        where:
-        - I = current (amps)
-        - R = resistance per 1000 feet (Ω/1000ft)
-        - D = one-way distance (feet)
-        - 2× accounts for round trip (out and back)
-        """
-        
-        # Maximum allowable voltage drop in volts
+        #maximum allowable voltage drop in volts
         max_voltage_drop = (max_voltage_drop_percent / 100) * voltage
         
-        # Calculate required resistance per 1000 feet
-        # Rearranging: R = (VD × 1000) / (2 × I × D)
+        #calculate required resistance per 1000 feet
+        #R = (VD × 1000) / (2 × I × D)
         required_resistance = (max_voltage_drop * 1000) / (2 * current * distance_one_way)
         
-        # Wire specifications (AWG to Ω/1000ft)
+        #wire specifications (AWG to Ω/1000ft)
         wire_specs = {
             '4': 0.49,
             '6': 0.78,
@@ -141,7 +126,7 @@ else:
             '4/0': 0.061
         }
         
-        # Find minimum gauge that meets requirement
+        #find minimum gauge that meets requirement
         suitable_gauges = [g for g, r in wire_specs.items() if r <= required_resistance]
         
         if suitable_gauges:
@@ -151,7 +136,7 @@ else:
             minimum_gauge = '4/0'
             actual_resistance = wire_specs['4/0']
         
-        # Calculate actual voltage drop with chosen wire
+        #calculate the actual voltage drop with chosen wire
         actual_voltage_drop = (2 * current * actual_resistance * distance_one_way) / 1000
         actual_voltage_drop_percent = (actual_voltage_drop / voltage) * 100
         
@@ -164,27 +149,27 @@ else:
             'meets_spec': actual_voltage_drop_percent <= max_voltage_drop_percent
         }
     
-    # Calculate for PV side
+    #calculate for PV side
     if st.button("Calculate Wire Gauges"):
         pv_result = calculate_wire_gauge(
             current=config['panel_current'],
             voltage=config['panel_voltage'],
             distance_one_way=pv_to_mppt_distance,
-            max_voltage_drop_percent=3.0  # NEC standard: 3% for sub-circuits
+            max_voltage_drop_percent=3.0  #NEC standard: ~3% for sub-circuits
         )
         
         battery_result = calculate_wire_gauge(
             current=config['battery_current'],
             voltage=config['battery_voltage'],
             distance_one_way=mppt_to_battery_distance,
-            max_voltage_drop_percent=2.0  # More stringent for battery side
+            max_voltage_drop_percent=2.0  #more stringent for the battery side
         )
         
-        # Store in session state
+        #store in sessionstate
         st.session_state.pv_wire_result = pv_result
         st.session_state.battery_wire_result = battery_result
     
-    # Display results if available
+    #display results
     if 'pv_wire_result' in st.session_state and 'battery_wire_result' in st.session_state:
         pv_result = st.session_state.pv_wire_result
         battery_result = st.session_state.battery_wire_result
@@ -235,7 +220,7 @@ else:
         
         st.divider()
         
-        # Wire gauge reference table
+        #wire gauge reference table
         st.subheader("Wire Gauge Reference")
         st.write("*Common DC wire gauges and their specifications (copper wire at 60°C):*")
         st.dataframe(wire_df, use_container_width=True, hide_index=True)
@@ -251,7 +236,7 @@ else:
         
         st.divider()
     
-    # Generate wiring diagram
+    #generate wiring diagram
     st.subheader("Wiring Diagram")
     
     fig, ax = plt.subplots(figsize=(14, 10))
@@ -259,13 +244,13 @@ else:
     ax.set_ylim(0, 10)
     ax.axis('off')
     
-    # Colors
+    #colors
     color_pv = '#FFD700'
     color_mppt = '#87CEEB'
     color_battery = '#FF6B6B'
     color_wire = '#333333'
     
-    # Helper function to draw boxes
+    #helper function...draws the boxes
     def draw_box(ax, x, y, width, height, label, color, fontsize=10):
         box = FancyBboxPatch((x - width/2, y - height/2), width, height,
                             boxstyle="round,pad=0.1", 
@@ -273,42 +258,41 @@ else:
         ax.add_patch(box)
         ax.text(x, y, label, ha='center', va='center', fontsize=fontsize, weight='bold')
     
-    # Helper function to draw connection labels
+    #helper function...draws connection labels
     def draw_label(ax, x, y, text, fontsize=9):
         ax.text(x, y, text, ha='center', va='center', fontsize=fontsize, 
                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
     
-    # Colors for wiring
-    color_positive = '#FF0000'  # Red for positive
-    color_negative = '#000000'   # Black for negative
-    color_ground = '#FFD700'   # Gold for ground
+    #wiring colors
+    color_positive = '#FF0000'  #red - positive
+    color_negative = '#000000'   #black - negative
+    color_ground = '#FFD700'   #gold - ground
 
     ####################################################
 
-    # Solar Panels (left side)
+    #pvs on left side
     panel_y_start = 8.5
     panel_spacing = 1.5
     panel_x_spacing = 2
 
-    # Draw all panels
+    #draw panels
     for p in range(config['parallel']):
         for i in range(config['series']):
             y_pos = panel_y_start - (i * panel_spacing)
             x_pos = 0.8 + (p * panel_x_spacing)
             draw_box(ax, x_pos, y_pos, 0.8, 0.6, f"PV", color_pv, fontsize=9)
-            # Add terminal labels
+            #terminal labels
             ax.text(x_pos + 0.7, y_pos + 0.5, '+', ha='center', va='center', fontsize=12, weight='bold', color='red',
                 bbox=dict(boxstyle='circle', facecolor='white', edgecolor='red', linewidth=1))
             ax.text(x_pos + 0.7, y_pos - 0.5, '−', ha='center', va='center', fontsize=12, weight='bold', color='black',
                 bbox=dict(boxstyle='circle', facecolor='white', edgecolor='black', linewidth=1))
 
-    # Draw series connections (within each string - + to −)
+    #draw series connections (+ to −)
     for p in range(config['parallel']):
         x_pos = 0.8 + (p * panel_x_spacing)
         for i in range(config['series'] - 1):
             y_start = panel_y_start - (i * panel_spacing)
             y_end = panel_y_start - ((i + 1) * panel_spacing)
-            
             ax.plot([x_pos + 0.8, x_pos + 1.3], [y_start + 0.5, y_start + 0.5], 
                     color=color_positive, linewidth=2.5)
             ax.plot([x_pos + 1.3, x_pos + 1.3], [y_start + 0.5, y_end - 0.5], 
@@ -316,67 +300,66 @@ else:
             ax.plot([x_pos + 1.3, x_pos + 0.8], [y_end - 0.5, y_end - 0.5], 
                     color=color_positive, linewidth=2.5)
 
-    # Draw parallel connections (+ to + above, − to − below)
+    #draw parallel connections
     for i in range(config['series']):
         y_pos = panel_y_start - (i * panel_spacing)
         
         for p in range(config['parallel'] - 1):
             x_start = 0.8 + (p * panel_x_spacing)
             x_end = 0.8 + ((p + 1) * panel_x_spacing)
-            
-            # Red: + to + (above)
+            #red: + to + 
             ax.plot([x_start + 0.7, x_start + 0.7, x_end + 0.7, x_end + 0.7], 
                     [y_pos + 0.5, y_pos + 1.0, y_pos + 1.0, y_pos + 0.5], 
                     color=color_positive, linewidth=2.5)
             
-            # Black: − to − (below)
+            #black: − to −
             ax.plot([x_start + 0.7, x_start + 0.7, x_end + 0.7, x_end + 0.7], 
                     [y_pos - 0.5, y_pos - 1.0, y_pos - 1.0, y_pos - 0.5], 
                     color=color_negative, linewidth=2.5)
 
-    # Output from PV array (from the last string)
+    #output from PV array (from the last string to MPPT)
     output_x = 0.8 + ((config['parallel'] - 1) * panel_x_spacing) + 0.7
     output_y_pos = panel_y_start  # Top panel +
     output_y_neg = panel_y_start - ((config['series'] - 1) * panel_spacing)  # Bottom panel −
 
-    # Route from array to MPPT
+    #route from pv array to MPPT
     ax.plot([output_x, 5.5], [output_y_pos, output_y_pos], color=color_positive, linewidth=2.5)
     ax.plot([5.5, 6.25], [output_y_pos, 6.8], color=color_positive, linewidth=2.5)
 
     ax.plot([output_x, 5.5], [output_y_neg, output_y_neg], color=color_negative, linewidth=2.5)
     ax.plot([5.5, 6.25], [output_y_neg, 6.2], color=color_negative, linewidth=2.5)
 
-    # Add wire gauge labels to diagram (if available)
+    #add wire gauge labels to diagram
     if 'pv_wire_result' in st.session_state:
         pv_result = st.session_state.pv_wire_result
         draw_label(ax, 5.5, 7.2, f"AWG {pv_result['gauge']}\n{pv_to_mppt_distance}ft", fontsize=8)
 
-    # MPPT Charge Controller
+    #MPPT Charge Controller
     draw_box(ax, 7.5, 6.5, 1.5, 1, "MPPT\nController", color_mppt, fontsize=10)
     draw_label(ax, 7.5, 5.1, f"In:{config['panel_voltage']:.0f}V@{config['panel_current']:.1f}A\nOut:{config['battery_voltage']:.0f}V@{config['battery_current']:.1f}A", fontsize=7)
 
-    # From MPPT to Battery
+    #from MPPT to Battery
     ax.plot([8.75, 11.5], [6.8, 6.8], color=color_positive, linewidth=2.5)
     ax.plot([8.75, 11.5], [6.2, 6.2], color=color_negative, linewidth=2.5)
 
-    # Add wire gauge labels to diagram (if available)
+    #add wire gauge labels to diagram
     if 'battery_wire_result' in st.session_state:
         battery_result = st.session_state.battery_wire_result
         draw_label(ax, 10, 7.2, f"AWG {battery_result['gauge']}\n{mppt_to_battery_distance}ft", fontsize=8)
 
-    # Battery
+    #batt
     draw_box(ax, 12.5, 6.5, 1.2, 0.8, f"Battery\n{config['battery_voltage']:.0f}V", color_battery, fontsize=10)
     draw_label(ax, 12.5, 5.2, f"Charge:{config['battery_current']:.1f}A\nPower:{config['panel_power']:.0f}W", fontsize=7)
 
-    # Ground connections
+    #grounds
     ax.plot([7.5, 7.5], [7.0, 7.8], color=color_ground, linewidth=1.5, linestyle='--')
     ax.plot([12.5, 12.5], [6.0, 5.0], color=color_ground, linewidth=1.5, linestyle='--')
 
-    # Add title
+    #title
     ax.text(7, 9.7, f"PV System Wiring Diagram - {config['config_str']}", 
         ha='center', fontsize=14, weight='bold')
 
-    # Add legend and config info
+    #legend and config info
     ax.text(0.2, 0.5, "Red = Positive (+)  |  Black = Negative (−)  |  Gold Dashed = Ground", 
             fontsize=8, style='italic', weight='bold')
     ax.text(0.2, -0.1, f"Config: {config['series']}S × {config['parallel']}P  =  {config['series']} panels/string × {config['parallel']} parallel strings", 
