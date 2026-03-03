@@ -242,7 +242,7 @@ if st.button("Perform Final Safety Check"):
                 #calculate output current from MPPT to battery
                 battery_output_current = output_power / battery_voltage
                 
-                # Check if battery output current exceeds charger limit
+                #check if battery output current exceeds charger limit
                 if battery_output_current > max_charge_current:
                     passes_all = False
                 else:
